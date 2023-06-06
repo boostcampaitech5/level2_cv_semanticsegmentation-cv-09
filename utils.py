@@ -37,8 +37,9 @@ def save_model(model, save_dir, file_name='fcn_resnet50_best_model.pt'):
 
 def viz_img(path, model, thr):
     image = cv2.imread(path)
+    tf = A.Resize(512, 512)
     image = image / 255.
-    image = A.Resize(image=image)['image']
+    image = tf(image=image)['image']
     image = image.transpose(2, 0, 1)    # make channel first
     image = torch.from_numpy(image).float()
     image = image.unsqueeze(dim=0)

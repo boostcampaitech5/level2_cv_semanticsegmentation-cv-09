@@ -54,10 +54,10 @@ def get_args():
     parser.add_argument('--name',type=str, default='base')
     parser.add_argument('--val_interval', type=int, default=1, help='evaluate interval (default: 1)')
     parser.add_argument('--log_interval', type=int, default=25, help='train log interval (default: 25)')
-    parser.add_argument('--viz_img_path', type=str, default='train/ID001/image1661130828152_R.png')
+    parser.add_argument('--viz_img_path', type=str, default='train/DCM/ID001/image1661130828152_R.png')
 
     # Container environment
-    parser.add_argument('--data_dir', type=str, default='/opt/ml/input/data')
+    parser.add_argument('--data_dir', type=str, default='/opt/ml')
     parser.add_argument('--save_dir', type=str, default='/opt/ml/level2_cv_semanticsegmentation-cv-09/checkpoint')
     parser.add_argument('--save_name', type=str, default='fcn_resnet50_best.pt')
 
@@ -185,7 +185,7 @@ if __name__=="__main__":
                     
                     dice = dice_coef(outputs, masks)
                     dices.append(dice)
-                    break
+                    #break
                         
                 dices = torch.cat(dices, dim=0)
                 dices_per_class = torch.mean(dices, dim=0)
@@ -226,4 +226,6 @@ if __name__=="__main__":
             fig, ax = plt.subplots(1, 2, figsize=(24, 12))
             ax[0].imshow(viz_image)    # remove channel dimension
             ax[1].imshow(viz_preds)
-            wandb.log({'image': plt}, step=epoch)
+            wandb.log({'viz_img': wandb.Image(fig)})
+            plt.clf()
+            plt.close('all')

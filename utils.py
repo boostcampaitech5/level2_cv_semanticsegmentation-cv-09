@@ -4,7 +4,8 @@ import numpy as np
 import os
 import cv2 
 import albumentations as A
-from dataset.dataset import encode_mask_to_rle, decode_rle_to_mask, label2rgb
+from dataset.dataset import label2rgb
+from inference import encode_mask_to_rle, decode_rle_to_mask
 import torch.nn.functional as F
 
 CLASSES = [

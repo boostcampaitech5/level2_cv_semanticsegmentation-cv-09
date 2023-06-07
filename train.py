@@ -82,7 +82,9 @@ if __name__=="__main__":
     train_filenames, train_labelnames, val_filenames, val_labelnames = split_dataset()
     
     train_transform = get_train_transform(train=True)
+
     val_transform = get_train_transform(train=False)
+
     
     train_dataset = XRayDataset(
                                 filenames = train_filenames,

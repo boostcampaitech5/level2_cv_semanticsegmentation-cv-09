@@ -8,6 +8,7 @@ import os
 import pandas as pd
 import argparse
 from importlib import import_module
+import torch.nn.functional as F
 
 def encode_mask_to_rle(mask):
     '''
@@ -97,7 +98,7 @@ if __name__=="__main__":
         drop_last=False
     )
     
-    model_module = getattr(import_module("models.my_model"), args.model)  # default: BaseModel
+    model_module = getattr(import_module("models.my_model"), 'FcnResnet50')  # default: BaseModel
     model = model_module(
         num_classes=len(test_dataset.CLASSES)
     )

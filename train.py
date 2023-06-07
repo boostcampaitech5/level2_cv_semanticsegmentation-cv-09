@@ -81,17 +81,19 @@ if __name__=="__main__":
     
     train_filenames, train_labelnames, val_filenames, val_labelnames = split_dataset()
     
-    transform = get_train_transform()
+    train_transform = get_train_transform(train=True)
+    val_transform = get_train_transform(train=False)
     
     train_dataset = XRayDataset(
                                 filenames = train_filenames,
                                 labelnames = train_labelnames,
-                                transforms= transform
+                                transforms= train_transform
                                 )
     val_dataset = XRayDataset(
                             filenames = val_filenames,
                             labelnames = val_labelnames,
-                            is_train = False
+                            is_train = False,
+                            transforms= val_transform
                             )
 
     train_loader = DataLoader(
@@ -205,27 +207,27 @@ if __name__=="__main__":
                 
         if args.wandb:
             if (epoch+1) < args.val_interval:
-                metric_info = {
-                    'lr/lr' : optimizer.param_groups[0]['lr'],
-                    'train/loss' : train_loss/len(train_loader),
-                }
-            else:
-                metric_info = {
-                    'lr/lr' : optimizer.param_groups[0]['lr'],
-                    'train/loss' : train_loss/len(train_loader),
-                    'val/loss' : val_loss/len(valid_loader),
-                    'val/dice' : avg_dice,
-                }
-            wandb.log(metric_info, step=epoch)
-            class_data = [[i, value.item()] for i,value in enumerate(dices_per_class)]
-            table = wandb.Table(data=class_data, columns=['class','dice'])
-            wandb.log({"class/class_dice":table})
+                val_loss = 0
+                avg_dice = 0
+
+            metric_info = {
+                'lr/lr' : optimizer.param_groups[0]['lr'],
+                'train/loss' : train_loss/len(train_loader),
+                'val/loss' : val_loss/len(valid_loader),
+                'val/dice' : avg_dice,
+            }
             
+            class_data = [value.item() for value in dices_per_class]
+            plt.bar([i for i in range(len(XRayDataset.CLASSES))], class_data)
+            
+            metric_info['dice_hist'] = wandb.Image(plt)
             # logging visualize output - by kyungbong 
             viz_image, viz_preds = viz_img(os.path.join(args.data_dir, args.viz_img_path), model, args.dice_thr)
             fig, ax = plt.subplots(1, 2, figsize=(24, 12))
             ax[0].imshow(viz_image)    # remove channel dimension
             ax[1].imshow(viz_preds)
-            wandb.log({'viz_img': wandb.Image(fig)}, step=epoch)
+            metric_info['viz_img'] = wandb.Image(plt)
+
+            wandb.log(metric_info, step=epoch)
             plt.clf()
             plt.close('all')

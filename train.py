@@ -83,6 +83,7 @@ if __name__=="__main__":
     
     train_transform = get_train_transform()
     val_transform = get_train_transform(val=True)
+    
     train_dataset = XRayDataset(
                                 filenames = train_filenames,
                                 labelnames = train_labelnames,
@@ -206,17 +207,15 @@ if __name__=="__main__":
                 
         if args.wandb:
             if (epoch+1) < args.val_interval:
-                metric_info = {
-                    'lr/lr' : optimizer.param_groups[0]['lr'],
-                    'train/loss' : train_loss/len(train_loader),
-                }
-            else:
-                metric_info = {
-                    'lr/lr' : optimizer.param_groups[0]['lr'],
-                    'train/loss' : train_loss/len(train_loader),
-                    'val/loss' : val_loss/len(valid_loader),
-                    'val/dice' : avg_dice,
-                }
+                val_loss = 0
+                avg_dice = 0
+
+            metric_info = {
+                'lr/lr' : optimizer.param_groups[0]['lr'],
+                'train/loss' : train_loss/len(train_loader),
+                'val/loss' : val_loss/len(valid_loader),
+                'val/dice' : avg_dice,
+            }
             wandb.log(metric_info, step=epoch)
             class_data = [[i, value.item()] for i,value in enumerate(dices_per_class)]
             table = wandb.Table(data=class_data, columns=['class','dice'])

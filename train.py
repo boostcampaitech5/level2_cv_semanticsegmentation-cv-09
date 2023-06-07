@@ -226,6 +226,6 @@ if __name__=="__main__":
             fig, ax = plt.subplots(1, 2, figsize=(24, 12))
             ax[0].imshow(viz_image)    # remove channel dimension
             ax[1].imshow(viz_preds)
-            wandb.log({'viz_img': wandb.Image(fig)})
+            wandb.log({'viz_img': wandb.Image(fig)}, step=epoch)
             plt.clf()
             plt.close('all')

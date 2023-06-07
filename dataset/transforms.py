@@ -1,7 +1,7 @@
 import albumentations as A
 
-def get_train_transform(val=False):
-    if val:
+def get_train_transform(train=True):
+    if train:
         transform = A.Compose([
             A.Resize(512,512),
             ])

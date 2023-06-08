@@ -76,6 +76,7 @@ def get_argparser():
     parser.add_argument('--output_dir', type=str, default=os.environ.get('SM_OUTPUT_DATA_DIR', './output'))
     parser.add_argument('--weight', type=str, default='best.pth')
 
+
     args = parser.parse_args()
     return args
 
@@ -100,6 +101,7 @@ if __name__=="__main__":
     )
     
     model = torch.load(os.path.join(args.model_dir, args.weight))
+
     
     rles, filename_and_class = test(model, test_loader)
     

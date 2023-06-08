@@ -10,6 +10,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from importlib import import_module
 import wandb
+import torch.cuda.amp as amp
 import matplotlib.pyplot as plt
 import torch.cuda.amp as amp
 
@@ -17,7 +18,7 @@ def get_args():
     parser = argparse.ArgumentParser()
     # Data and model checkpoints directories
     parser.add_argument('--seed', type=int, default=42, help='random seed (default: 42)')
-    parser.add_argument('--epochs', type=int, default=50, help='number of epochs to train (default: 30)')
+    parser.add_argument('--epochs', type=int, default=50, help='number of epochs to train (default: 50)')
     
     # data
     parser.add_argument("--resize", nargs="+", type=int, default=[512, 512], help='resize size for image when training')
@@ -133,6 +134,7 @@ if __name__=="__main__":
     for epoch in range(args.epochs):
         model.train()
         train_loss = 0
+
         with tqdm(total=len(train_loader)) as pbar:
             for images, masks in train_loader:
                 pbar.set_description('[Epoch {}]'.format(epoch + 1))
@@ -165,7 +167,6 @@ if __name__=="__main__":
                 }
                 pbar.set_postfix(train_dict)
 
-             
         # validation 주기에 따른 loss 출력 및 best model 저장
         if (epoch + 1) % args.val_interval == 0:
             print(f'Start validation #{(epoch+1):2d}')
@@ -177,7 +178,6 @@ if __name__=="__main__":
                     n_class = len(XRayDataset.CLASSES)
                     val_loss = 0
                     cnt = 0
-
                     for images, masks in valid_loader:
                         pbar.set_description('[Epoch {}]'.format(epoch + 1))
                         images, masks = images.cuda(), masks.cuda()         

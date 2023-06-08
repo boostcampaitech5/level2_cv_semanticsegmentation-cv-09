@@ -10,13 +10,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 from importlib import import_module
 import wandb
+import torch.cuda.amp as amp
 import matplotlib.pyplot as plt
 
 def get_args():
     parser = argparse.ArgumentParser()
     # Data and model checkpoints directories
     parser.add_argument('--seed', type=int, default=42, help='random seed (default: 42)')
-    parser.add_argument('--epochs', type=int, default=2, help='number of epochs to train (default: 30)')
+    parser.add_argument('--epochs', type=int, default=30, help='number of epochs to train (default: 30)')
     
     # data
     parser.add_argument("--resize", nargs="+", type=int, default=[512, 512], help='resize size for image when training')
@@ -129,6 +130,9 @@ if __name__=="__main__":
     n_class = len(XRayDataset.CLASSES)
     best_dice = 0.
     
+    # AMP : loss scale을 위한 GradScaler 생성
+    scaler = amp.GradScaler()
+    
     for epoch in range(args.epochs):
         model.train()
         train_loss = 0
@@ -137,15 +141,20 @@ if __name__=="__main__":
             images, masks = images.cuda(), masks.cuda()
             model = model.cuda()
             
-            # inference
-            outputs = model(images)
+            with amp.autocast():
+                # inference
+                outputs = model(images)['out']
+                # loss 계산
+                loss = criterion(outputs, masks)
             
-            # loss 계산
-            loss = criterion(outputs, masks)
             train_loss += loss.item()
             optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+            
+            scaler.scale(loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+            # loss.backward()
+            # optimizer.step()
             
             # step 주기에 따른 loss 출력
             if (step + 1) % 25 == 0:
@@ -154,7 +163,7 @@ if __name__=="__main__":
                     f'Step [{step+1}/{len(train_loader)}], '
                     f'Loss: {round(loss.item(),4)}'
                 )
-             
+                
         # validation 주기에 따른 loss 출력 및 best model 저장
         if (epoch + 1) % args.val_interval == 0:
             print(f'Start validation #{(epoch+1):2d}')

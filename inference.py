@@ -72,8 +72,9 @@ def get_argparser():
 
     # Container environment
     parser.add_argument('--data_dir', type=str, default=os.environ.get('SM_CHANNEL_EVAL', '/opt/ml/test/DCM'))
-    parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_CHANNEL_MODEL', './save_model'))
+    parser.add_argument('--model_path', type=str, default=os.environ.get('SM_CHANNEL_MODEL', './checkpoint'))
     parser.add_argument('--output_dir', type=str, default=os.environ.get('SM_OUTPUT_DATA_DIR', './output'))
+    parser.add_argument('--model', type=str, default="FcnResnet50")
 
     args = parser.parse_args()
     return args
@@ -103,7 +104,7 @@ if __name__=="__main__":
         num_classes=len(test_dataset.CLASSES)
     )
     
-    model = torch.load(os.path.join(args.model_dir, "fcn_resnet50_best.pt"))
+    model = torch.load(os.path.join("" "./checkpoint/fcn_resnet50_best.pt"))
     
     rles, filename_and_class = test(model, test_loader)
     

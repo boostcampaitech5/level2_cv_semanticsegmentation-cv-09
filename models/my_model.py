@@ -117,3 +117,4 @@ class Nested_UNet(nn.Module):
             output = self.output(x0_4)
 
         return output
+        return x['out']

@@ -48,7 +48,7 @@ def test(model, data_loader, thr=0.5):
 
         for step, (images, image_names) in tqdm(enumerate(data_loader), total=len(data_loader)):
             images = images.cuda()    
-            outputs = model(images)['out']
+            outputs = model(images)
             
             # restore original size
             outputs = F.interpolate(outputs, size=(2048, 2048), mode="bilinear")
@@ -99,7 +99,7 @@ if __name__=="__main__":
         drop_last=False
     )
     
-    model_module = getattr(import_module("models.my_model"), args.model)  # default: BaseModel
+    model_module = getattr(import_module("models.my_model"), 'FcnResnet50')  # default: BaseModel
     model = model_module(
         num_classes=len(test_dataset.CLASSES)
     )

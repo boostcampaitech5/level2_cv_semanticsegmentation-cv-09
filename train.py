@@ -83,7 +83,9 @@ if __name__=="__main__":
     train_filenames, train_labelnames, val_filenames, val_labelnames = split_dataset()
     
     train_transform = get_train_transform(train=True)
-    val_transform = get_train_transform()
+
+    val_transform = get_train_transform(train=False)
+
     
     train_dataset = XRayDataset(
                                 filenames = train_filenames,
@@ -177,7 +179,7 @@ if __name__=="__main__":
                     images, masks = images.cuda(), masks.cuda()         
                     model = model.cuda()
                     
-                    outputs = model(images)['out']
+                    outputs = model(images)
                     
                     output_h, output_w = outputs.size(-2), outputs.size(-1)
                     mask_h, mask_w = masks.size(-2), masks.size(-1)
@@ -225,16 +227,18 @@ if __name__=="__main__":
                 'val/loss' : val_loss/len(valid_loader),
                 'val/dice' : avg_dice,
             }
-            wandb.log(metric_info, step=epoch)
-            class_data = [[i, value.item()] for i,value in enumerate(dices_per_class)]
-            table = wandb.Table(data=class_data, columns=['class','dice'])
-            wandb.log({"class/class_dice":table})
             
+            class_data = [value.item() for value in dices_per_class]
+            plt.bar([i for i in range(len(XRayDataset.CLASSES))], class_data)
+            
+            metric_info['dice_hist'] = wandb.Image(plt)
             # logging visualize output - by kyungbong 
             viz_image, viz_preds = viz_img(os.path.join(args.data_dir, args.viz_img_path), model, args.dice_thr)
             fig, ax = plt.subplots(1, 2, figsize=(24, 12))
             ax[0].imshow(viz_image)    # remove channel dimension
             ax[1].imshow(viz_preds)
-            wandb.log({'viz_img': wandb.Image(fig)}, step=epoch)
+            metric_info['viz_img'] = wandb.Image(plt)
+
+            wandb.log(metric_info, step=epoch)
             plt.clf()
             plt.close('all')

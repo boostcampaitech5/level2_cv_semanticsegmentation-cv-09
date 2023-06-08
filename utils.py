@@ -7,6 +7,7 @@ import albumentations as A
 from dataset.dataset import label2rgb
 from inference import encode_mask_to_rle, decode_rle_to_mask
 import torch.nn.functional as F
+import torch.nn as nn
 
 CLASSES = [
     'finger-1', 'finger-2', 'finger-3', 'finger-4', 'finger-5',
@@ -64,3 +65,13 @@ def viz_img(path, model, thr):
     preds = np.stack(preds, 0)
     image = image.squeeze(dim=0).permute(1, 2, 0)
     return image, label2rgb(preds) 
+
+def init_weights(m, init_type='kaiming'):
+    if init_type == 'kaiming':
+        classname = m.__class__.__name__
+        if hasattr(m, 'weight') and (classname.find('Conv') != -1 or classname.find('Linear') != -1):
+            nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            if hasattr(m, 'bias') and m.bias is not None:
+                nn.init.constant_(m.bias, 0.0)
+    else:
+        raise NotImplementedError("Initialization type '{}' is not supported.".format(init_type))

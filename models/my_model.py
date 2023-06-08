@@ -10,4 +10,4 @@ class FcnResnet50(nn.Module):
         
     def forward(self,x):
         x = self.model(x)
-        return x
+        return x['out']

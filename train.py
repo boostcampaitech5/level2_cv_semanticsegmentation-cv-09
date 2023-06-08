@@ -138,7 +138,7 @@ if __name__=="__main__":
             model = model.cuda()
             
             # inference
-            outputs = model(images)['out']
+            outputs = model(images)
             
             # loss 계산
             loss = criterion(outputs, masks)
@@ -170,7 +170,7 @@ if __name__=="__main__":
                     images, masks = images.cuda(), masks.cuda()         
                     model = model.cuda()
                     
-                    outputs = model(images)['out']
+                    outputs = model(images)
                     
                     output_h, output_w = outputs.size(-2), outputs.size(-1)
                     mask_h, mask_w = masks.size(-2), masks.size(-1)

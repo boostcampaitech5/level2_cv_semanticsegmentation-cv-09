@@ -1,18 +1,15 @@
 import albumentations as A
 
-def get_train_transform(train=True):
+def get_train_transform(train=True,img_size=(512,512)):
     if train:
         transform = A.Compose([
-            A.Resize(512,512),
-<<<<<<< HEAD
+            A.Resize(img_size[0],img_size[1]),
             A.Rotate(limit=10),
-=======
-            A.Rotate((-10, 10), p=0.5),
-            A.HorizontalFlip(p=0.5)
->>>>>>> 37ab243e169d415f9a17f8b5c8a0ec077219ca83
+            A.HorizontalFlip(),
+
             ])
     else:
-        transform = A.Resize(512,512)
+        transform = A.Resize(img_size[0],img_size[1])
     
     return transform
 

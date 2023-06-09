@@ -12,12 +12,13 @@ from importlib import import_module
 import wandb
 import torch.cuda.amp as amp
 import matplotlib.pyplot as plt
+import torch.cuda.amp as amp
 
 def get_args():
     parser = argparse.ArgumentParser()
     # Data and model checkpoints directories
     parser.add_argument('--seed', type=int, default=42, help='random seed (default: 42)')
-    parser.add_argument('--epochs', type=int, default=30, help='number of epochs to train (default: 30)')
+    parser.add_argument('--epochs', type=int, default=50, help='number of epochs to train (default: 50)')
     
     # data
     parser.add_argument("--resize", nargs="+", type=int, default=[512, 512], help='resize size for image when training')
@@ -31,7 +32,7 @@ def get_args():
     # optimizer
     parser.add_argument('--lr', type=float, default=1e-4, help='learning rate (default: 1e-4)')
     parser.add_argument('--lr_decay_step', type=int, default=5, help='learning rate scheduler deacy step (default: 5)')
-    parser.add_argument('--optimizer', type=str, default='sgd', help='optimizer such as sgd, momentum, adam, adagrad (default: sgd)')
+    parser.add_argument('--optimizer', type=str, default='adam', help='optimizer such as sgd, momentum, adam, adagrad (default: adam)')
     parser.add_argument('--momentum', type=float, default=0.9, help='momentum (default: 0.9)')
     parser.add_argument('--weight_decay', type=float, default=1e-6, help='weight decay (default: 1e-6)')
     
@@ -54,13 +55,12 @@ def get_args():
     parser.add_argument('--project',type=str, default='seg_baseline')
     parser.add_argument('--name',type=str, default='base')
     parser.add_argument('--val_interval', type=int, default=1, help='evaluate interval (default: 1)')
-    parser.add_argument('--log_interval', type=int, default=25, help='train log interval (default: 25)')
     parser.add_argument('--viz_img_path', type=str, default='train/DCM/ID001/image1661130828152_R.png')
 
     # Container environment
     parser.add_argument('--data_dir', type=str, default='/opt/ml')
-    parser.add_argument('--save_dir', type=str, default='/opt/ml/level2_cv_semanticsegmentation-cv-09/checkpoint')
-    parser.add_argument('--save_name', type=str, default='fcn_resnet50_best.pt')
+    parser.add_argument('--save_dir', type=str, default='./checkpoint')
+    parser.add_argument('--save_name', type=str, default='best.pt')
 
     args = parser.parse_args()
     
@@ -82,7 +82,7 @@ if __name__=="__main__":
     
     train_filenames, train_labelnames, val_filenames, val_labelnames = split_dataset()
     
-    train_transform = get_train_transform()
+    train_transform = get_train_transform(img_size=args.resize)
     val_transform = get_train_transform(train=False)
     
     train_dataset = XRayDataset(
@@ -134,81 +134,92 @@ if __name__=="__main__":
     for epoch in range(args.epochs):
         model.train()
         train_loss = 0
-        for step, (images, masks) in tqdm(enumerate(train_loader),total=len(train_loader)):
-            # gpu 연산을 위해 device 할당
-            images, masks = images.cuda(), masks.cuda()
-            model = model.cuda()
-            
-            with amp.autocast():
-                # inference
-                outputs = model(images)['out']
-                # loss 계산
-                loss = criterion(outputs, masks)
-            
-            train_loss += loss.item()
-            optimizer.zero_grad()
-            
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
-            # loss.backward()
-            # optimizer.step()
-            
-            # step 주기에 따른 loss 출력
-            if (step + 1) % 25 == 0:
-                print(
-                    f'Epoch [{epoch+1}/{args.epochs}], '
-                    f'Step [{step+1}/{len(train_loader)}], '
-                    f'Loss: {round(loss.item(),4)}'
-                )
+
+        with tqdm(total=len(train_loader)) as pbar:
+            for images, masks in train_loader:
+                pbar.set_description('[Epoch {}]'.format(epoch + 1))
+                # gpu 연산을 위해 device 할당
+                images, masks = images.cuda(), masks.cuda()
+                model = model.cuda()
                 
+                # inference
+                with amp.autocast():
+                    outputs = model(images)
+                    
+                    # restore original size for hrnet_ocr
+                    output_h, output_w = outputs.size(-2), outputs.size(-1)
+                    mask_h, mask_w = masks.size(-2), masks.size(-1)
+                    if output_h != mask_h or output_w != mask_w:
+                        outputs = F.interpolate(outputs, size=(mask_h, mask_w), mode="bilinear")
+
+                    loss = criterion(outputs, masks)
+                train_loss += loss.item()
+                optimizer.zero_grad()
+                
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
+                # loss.backward()
+                # optimizer.step()
+                pbar.update(1)
+                train_dict ={
+                    'train loss': loss.item()
+                }
+                pbar.set_postfix(train_dict)
+
         # validation 주기에 따른 loss 출력 및 best model 저장
         if (epoch + 1) % args.val_interval == 0:
             print(f'Start validation #{(epoch+1):2d}')
             model.eval()
 
             dices = []
-            with torch.no_grad():
-                n_class = len(XRayDataset.CLASSES)
-                val_loss = 0
-                cnt = 0
-
-                for step, (images, masks) in tqdm(enumerate(valid_loader), total=len(valid_loader)):
-                    images, masks = images.cuda(), masks.cuda()         
-                    model = model.cuda()
-                    
-                    outputs = model(images)
-                    
-                    output_h, output_w = outputs.size(-2), outputs.size(-1)
-                    mask_h, mask_w = masks.size(-2), masks.size(-1)
-                    
-                    # restore original size
-                    if output_h != mask_h or output_w != mask_w:
-                        outputs = F.interpolate(outputs, size=(mask_h, mask_w), mode="bilinear")
-                    
-                    loss = criterion(outputs, masks)
-                    val_loss += loss
-                    cnt += 1
-                    
-                    outputs = torch.sigmoid(outputs)
-                    outputs = (outputs > args.dice_thr).detach().cpu()
-                    masks = masks.detach().cpu()
-                    
-                    dice = dice_coef(outputs, masks)
-                    dices.append(dice)
-                    #break
+            with tqdm(total=len(valid_loader)) as pbar:
+                with torch.no_grad():
+                    n_class = len(XRayDataset.CLASSES)
+                    val_loss = 0
+                    cnt = 0
+                    for images, masks in valid_loader:
+                        pbar.set_description('[Epoch {}]'.format(epoch + 1))
+                        images, masks = images.cuda(), masks.cuda()         
+                        model = model.cuda()
                         
-                dices = torch.cat(dices, dim=0)
-                dices_per_class = torch.mean(dices, dim=0)
-                dice_str = [
-                    f"{c:<12}: {d.item():.4f}"
-                    for c, d in zip(XRayDataset.CLASSES, dices_per_class)
-                ]
-                dice_str = "\n".join(dice_str)
-                print(dice_str)
-            
-                avg_dice = torch.mean(dices_per_class).item()
-            
+                        outputs = model(images)
+                        
+                        output_h, output_w = outputs.size(-2), outputs.size(-1)
+                        mask_h, mask_w = masks.size(-2), masks.size(-1)
+                        
+                        # restore original size
+                        if output_h != mask_h or output_w != mask_w:
+                            outputs = F.interpolate(outputs, size=(mask_h, mask_w), mode="bilinear")
+                        
+                        loss = criterion(outputs, masks)
+                        val_loss += loss.item()
+                        cnt += 1
+                        outputs = torch.sigmoid(outputs)
+                        outputs = (outputs > args.dice_thr).detach().cpu()
+                        masks = masks.detach().cpu()
+                        
+                        dice = dice_coef(outputs, masks)
+                        dices.append(dice)
+                        
+                        pbar.update(1)
+                        val_dict ={
+                            'val loss': loss.item()
+                        }
+                        pbar.set_postfix(val_dict)
+                        #break
+                            
+                    dices = torch.cat(dices, dim=0)
+                    dices_per_class = torch.mean(dices, dim=0)
+                    dice_str = [
+                        f"{c:<12}: {d.item():.4f}"
+                        for c, d in zip(XRayDataset.CLASSES, dices_per_class)
+                    ]
+                    dice_str = "\n".join(dice_str)
+                    print(dice_str)
+                
+                    avg_dice = torch.mean(dices_per_class).item()
+                
             if best_dice < avg_dice:
                 print(f"Best performance at epoch: {epoch + 1}, {best_dice:.4f} -> {avg_dice:.4f}")
                 best_dice = avg_dice

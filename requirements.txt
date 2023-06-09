@@ -6,3 +6,5 @@ tqdm
 scikit-learn
 albumentations
 wandb
+yacs
+torchinfo

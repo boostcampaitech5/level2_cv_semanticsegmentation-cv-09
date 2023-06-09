@@ -59,7 +59,7 @@ def get_args():
 
     # Container environment
     parser.add_argument('--data_dir', type=str, default='/opt/ml')
-    parser.add_argument('--save_dir', type=str, default='/opt/ml/level2_cv_semanticsegmentation-cv-09/checkpoint')
+    parser.add_argument('--save_dir', type=str, default='./checkpoint')
     parser.add_argument('--save_name', type=str, default='best.pt')
 
     args = parser.parse_args()

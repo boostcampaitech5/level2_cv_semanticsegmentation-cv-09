@@ -1,5 +1,6 @@
 from dataset.dataset import split_dataset, XRayDataset
 from dataset.transforms import get_train_transform
+from optim.losses import create_criterion
 from utils import *
 import argparse
 import torch
@@ -35,7 +36,8 @@ def get_args():
     parser.add_argument('--optimizer', type=str, default='adam', help='optimizer such as sgd, momentum, adam, adagrad (default: adam)')
     parser.add_argument('--momentum', type=float, default=0.9, help='momentum (default: 0.9)')
     parser.add_argument('--weight_decay', type=float, default=1e-6, help='weight decay (default: 1e-6)')
-    
+    parser.add_argument('--loss', type=str, default='bce', help='[bce, focal, dice, iou, combine: (default: bce)')
+
     # scheduler
     parser.add_argument('--scheduler', type=str, default='steplr', help='scheduler such as steplr, lambdalr, exponentiallr, cycliclr, reducelronplateau etc. (default: steplr)')
     parser.add_argument('--gamma', type=float, default=0.5, help='learning rate scheduler gamma (default: 0.5)')
@@ -118,8 +120,8 @@ if __name__=="__main__":
     )
     
     # Loss function 정의
-    criterion = nn.BCEWithLogitsLoss()
-
+    criterion = create_criterion(args.loss)
+    
     # Optimizer 정의
     optimizer = torch.optim.Adam(params=model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     

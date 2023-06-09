@@ -48,7 +48,7 @@ def test(model, data_loader, thr=0.5):
 
         for step, (images, image_names) in tqdm(enumerate(data_loader), total=len(data_loader)):
             images = images.cuda()    
-            outputs = model(images)['out']
+            outputs = model(images)
             
             # restore original size
             outputs = F.interpolate(outputs, size=(2048, 2048), mode="bilinear")
@@ -72,8 +72,9 @@ def get_argparser():
 
     # Container environment
     parser.add_argument('--data_dir', type=str, default=os.environ.get('SM_CHANNEL_EVAL', '/opt/ml/test/DCM'))
-    parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_CHANNEL_MODEL', './save_model'))
+    parser.add_argument('--model_path', type=str, default=os.environ.get('SM_CHANNEL_MODEL', './checkpoint'))
     parser.add_argument('--output_dir', type=str, default=os.environ.get('SM_OUTPUT_DATA_DIR', './output'))
+    parser.add_argument('--model', type=str, default="FcnResnet50")
 
     args = parser.parse_args()
     return args
@@ -100,7 +101,7 @@ if __name__=="__main__":
     
 
     
-    model = torch.load(os.path.join(args.model_dir, "fcn_resnet50_best.pt"))
+    model = torch.load(os.path.join("" "./checkpoint/fcn_resnet50_best.pt"))
     
     rles, filename_and_class = test(model, test_loader)
     

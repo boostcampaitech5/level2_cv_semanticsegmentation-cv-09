@@ -45,7 +45,7 @@ def viz_img(path, model, thr):
     image = torch.from_numpy(image).float()
     image = image.unsqueeze(dim=0)
 
-    viz_outputs = model(image.to('cuda'))['out']
+    viz_outputs = model(image.to('cuda'))
     viz_outputs = F.interpolate(viz_outputs, size=(2048, 2048), mode="bilinear")
     viz_outputs = torch.sigmoid(viz_outputs)
     viz_outputs = (viz_outputs > thr).detach().cpu().numpy() 

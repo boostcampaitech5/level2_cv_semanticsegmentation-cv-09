@@ -2,4 +2,6 @@ checkpoint
 __pycache__
 output/
 wandb
+
 *.out
+

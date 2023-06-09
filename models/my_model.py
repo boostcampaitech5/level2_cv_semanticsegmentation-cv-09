@@ -11,7 +11,6 @@ class FcnResnet50(nn.Module):
         
     def forward(self,x):
         x = self.model(x)
-
         return x['out']
     
 
@@ -26,4 +25,5 @@ class Unet(nn.Module):
         )
     def forward(self, x):
         return self.model(x)
+
 

@@ -75,7 +75,7 @@ def get_argparser():
     parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_CHANNEL_MODEL', './checkpoint'))
     parser.add_argument('--output_dir', type=str, default=os.environ.get('SM_OUTPUT_DATA_DIR', './output'))
     parser.add_argument('--weight', type=str, default='best.pt')
-
+    parser.add_argument("--resize", nargs="+", type=int, default=[512, 512], help='resize size for image when training')
 
     args = parser.parse_args()
     return args
@@ -84,8 +84,8 @@ def get_argparser():
 if __name__=="__main__":
     args = get_argparser()
     
-    
-    transform = get_test_transform()
+    print(args.resize)
+    transform = get_test_transform(args.resize)
     
     test_dataset = XRayInferenceDataset(
         data_dir=args.data_dir,

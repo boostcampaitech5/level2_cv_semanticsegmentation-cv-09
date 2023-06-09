@@ -118,6 +118,7 @@ if __name__=="__main__":
     model = model_module(
         num_classes=len(train_dataset.CLASSES)
     )
+
     
     # Loss function 정의
     criterion = nn.BCEWithLogitsLoss()

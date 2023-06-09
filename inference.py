@@ -98,10 +98,7 @@ if __name__=="__main__":
         drop_last=False
     )
     
-    model_module = getattr(import_module("models.my_model"), 'FcnResnet50')  # default: BaseModel
-    model = model_module(
-        num_classes=len(test_dataset.CLASSES)
-    )
+
     
     model = torch.load(os.path.join(args.model_dir, "fcn_resnet50_best.pt"))
     

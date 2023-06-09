@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torchvision import models
+import segmentation_models_pytorch as smp
 
 class FcnResnet50(nn.Module):
     def __init__(self,pretrained=True,num_classes=29):
@@ -10,4 +11,19 @@ class FcnResnet50(nn.Module):
         
     def forward(self,x):
         x = self.model(x)
-        return x
+
+        return x['out']
+    
+
+class Unet(nn.Module):
+    def __init__(self, num_classes=29):
+        super(Unet, self).__init__()
+        self.model = smp.Unet(
+            encoder_name="resnet101",        # choose encoder, e.g. mobilenet_v2 or efficientnet-b7
+            encoder_weights="imagenet",     # use `imagenet` pre-trained weights for encoder initialization
+            in_channels=3,                  # model input channels (1 for gray-scale images, 3 for RGB, etc.)
+            classes=num_classes,                      # model output channels (number of classes in your dataset)
+        )
+    def forward(self, x):
+        return self.model(x)
+

@@ -661,7 +661,7 @@ class HighResolutionNet(nn.Module):
             raise RuntimeError('No such file {}'.format(pretrained))
 
 
-def get_seg_model(name='hrnet48',pretrained ="", **kwargs):
+def get_ocr_model(name='hrnet48',pretrained ="", **kwargs):
     from yacs.config import CfgNode as CN
 
     # configs for HRNet48

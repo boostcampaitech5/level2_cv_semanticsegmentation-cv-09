@@ -85,7 +85,7 @@ if __name__=="__main__":
     train_filenames, train_labelnames, val_filenames, val_labelnames = split_dataset()
     
     train_transform = get_train_transform(img_size=args.resize)
-    val_transform = get_train_transform(train=False)
+    val_transform = get_train_transform(train=False,img_size=args.resize)
     
     train_dataset = XRayDataset(
                                 filenames = train_filenames,
@@ -99,11 +99,12 @@ if __name__=="__main__":
                             transforms= val_transform
                             )
 
+    num_workers = min(args.batch_size, 8)
     train_loader = DataLoader(
         dataset=train_dataset, 
         batch_size=args.batch_size,
         shuffle=True,
-        num_workers=8,
+        num_workers=num_workers,
         drop_last=True,
     )
 
@@ -137,41 +138,6 @@ if __name__=="__main__":
     for epoch in range(args.epochs):
         model.train()
         train_loss = 0
-<<<<<<< HEAD
-        for step, (images, masks) in tqdm(enumerate(train_loader),total=len(train_loader)):
-            # gpu 연산을 위해 device 할당
-            images, masks = images.cuda(), masks.cuda()
-            model = model.cuda()
-            
-            with amp.autocast():
-                # inference
-                outputs = model(images)
-                # loss 계산
-                loss = criterion(outputs, masks)
-            
-            train_loss += loss.item()
-            optimizer.zero_grad()
-            
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
-            # loss.backward()
-            # optimizer.step()
-            
-            # step 주기에 따른 loss 출력
-            if (step + 1) % 25 == 0:
-                print(
-                    f'Epoch [{epoch+1}/{args.epochs}], '
-                    f'Step [{step+1}/{len(train_loader)}], '
-                    f'Loss: {round(loss.item(),4)}'
-                )
-                
-        # validation 주기에 따른 loss 출력 및 best model 저장
-        if (epoch + 1) % args.val_interval == 0:
-            print(f'Start validation #{(epoch+1):2d}')
-            model.eval()
-=======
->>>>>>> 3f1c65a7325b9b5ec76a3234c4cfc7f655015832
 
         with tqdm(total=len(train_loader)) as pbar:
             for images, masks in train_loader:
@@ -280,7 +246,7 @@ if __name__=="__main__":
             
             metric_info['dice_hist'] = wandb.Image(plt)
             # logging visualize output - by kyungbong 
-            viz_image, viz_preds = viz_img(os.path.join(args.data_dir, args.viz_img_path), model, args.dice_thr)
+            viz_image, viz_preds = viz_img(os.path.join(args.data_dir, args.viz_img_path), model, args.dice_thr, args.resize)
             fig, ax = plt.subplots(1, 2, figsize=(24, 12))
             ax[0].imshow(viz_image)    # remove channel dimension
             ax[1].imshow(viz_preds)

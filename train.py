@@ -245,7 +245,7 @@ if __name__=="__main__":
             
             metric_info['dice_hist'] = wandb.Image(plt)
             # logging visualize output - by kyungbong 
-            viz_image, viz_preds = viz_img(os.path.join(args.data_dir, args.viz_img_path), model, args.dice_thr)
+            viz_image, viz_preds = viz_img(os.path.join(args.data_dir, args.viz_img_path), model, args.dice_thr, args.resize)
             fig, ax = plt.subplots(1, 2, figsize=(24, 12))
             ax[0].imshow(viz_image)    # remove channel dimension
             ax[1].imshow(viz_preds)

@@ -26,6 +26,15 @@ class HRNet48OCR(nn.Module):
         x = self.model(x)
         return x
     
+class HRNet32OCR(nn.Module):
+    def __init__(self,pretrained="",num_classes=29):
+        super().__init__()
+        self.model = get_seg_model(name='hrnet32',pretrained=pretrained)
+    
+    def forward(self,x):
+        x = self.model(x)
+        return x
+    
 
 class Unet(nn.Module):
     def __init__(self, num_classes=29):

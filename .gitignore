@@ -4,3 +4,5 @@ output/
 wandb
 nohup.out
 *.out
+*.pth
+*.pt 

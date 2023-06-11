@@ -33,7 +33,7 @@ def get_args():
     # optimizer
     parser.add_argument('--lr', type=float, default=1e-4, help='learning rate (default: 1e-4)')
     parser.add_argument('--lr_decay_step', type=int, default=5, help='learning rate scheduler deacy step (default: 5)')
-    parser.add_argument('--optimizer', type=str, default='adam', help='optimizer such as sgd, momentum, adam, adagrad (default: adam)')
+    parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer such as SGD, Momentum, Adam, Adagrad (default: adam)')
     parser.add_argument('--momentum', type=float, default=0.9, help='momentum (default: 0.9)')
     parser.add_argument('--weight_decay', type=float, default=1e-6, help='weight decay (default: 1e-6)')
     parser.add_argument('--loss', type=str, default='bce', help='[bce, focal, dice, iou, combine: (default: bce)')
@@ -125,7 +125,8 @@ if __name__=="__main__":
     criterion = create_criterion(args.loss)
     
     # Optimizer 정의
-    optimizer = torch.optim.Adam(params=model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    optim_module = getattr(import_module("torch.optim"), args.optimizer)  # default: adam
+    optimizer = optim_module(params=model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     
     print(f'Start training..')
     

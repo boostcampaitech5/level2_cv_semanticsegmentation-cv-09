@@ -85,7 +85,7 @@ if __name__=="__main__":
     train_filenames, train_labelnames, val_filenames, val_labelnames = split_dataset()
     
     train_transform = get_train_transform(img_size=args.resize)
-    val_transform = get_train_transform(train=False)
+    val_transform = get_train_transform(train=False,img_size=args.resize)
     
     train_dataset = XRayDataset(
                                 filenames = train_filenames,
@@ -99,11 +99,12 @@ if __name__=="__main__":
                             transforms= val_transform
                             )
 
+    num_workers = min(args.batch_size, 8)
     train_loader = DataLoader(
         dataset=train_dataset, 
         batch_size=args.batch_size,
         shuffle=True,
-        num_workers=8,
+        num_workers=num_workers,
         drop_last=True,
     )
 
@@ -277,7 +278,7 @@ if __name__=="__main__":
             
             metric_info['dice_hist'] = wandb.Image(plt)
             # logging visualize output - by kyungbong 
-            viz_image, viz_preds = viz_img(os.path.join(args.data_dir, args.viz_img_path), model, args.dice_thr)
+            viz_image, viz_preds = viz_img(os.path.join(args.data_dir, args.viz_img_path), model, args.dice_thr, args.resize)
             fig, ax = plt.subplots(1, 2, figsize=(24, 12))
             ax[0].imshow(viz_image)    # remove channel dimension
             ax[1].imshow(viz_preds)

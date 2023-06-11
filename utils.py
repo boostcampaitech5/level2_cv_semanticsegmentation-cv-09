@@ -37,19 +37,20 @@ def save_model(model, save_dir, file_name='fcn_resnet50_best_model.pt'):
     print(f"Save model in {output_path}")
     torch.save(model, output_path)
 
-def viz_img(path, model, thr):
+def viz_img(path, model, thr, img_size = (512,512)):
     image = cv2.imread(path)
-    tf = A.Resize(512, 512)
+    tf = A.Resize(img_size[0],img_size[1])
     image = image / 255.
     image = tf(image=image)['image']
     image = image.transpose(2, 0, 1)    # make channel first
     image = torch.from_numpy(image).float()
     image = image.unsqueeze(dim=0)
 
-    viz_outputs = model(image.to('cuda'))
-    viz_outputs = F.interpolate(viz_outputs, size=(2048, 2048), mode="bilinear")
-    viz_outputs = torch.sigmoid(viz_outputs)
-    viz_outputs = (viz_outputs > thr).detach().cpu().numpy() 
+    with torch.no_grad():
+        viz_outputs = model(image.to('cuda'))
+        viz_outputs = F.interpolate(viz_outputs, size=(2048, 2048), mode="bilinear")
+        viz_outputs = torch.sigmoid(viz_outputs)
+        viz_outputs = (viz_outputs > thr).detach().cpu().numpy() 
 
     viz_rles = []
     for output in viz_outputs:

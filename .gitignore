@@ -2,6 +2,7 @@ checkpoint
 __pycache__
 output/
 wandb
-
+quantized_models/
+converted_model/
 *.out
 

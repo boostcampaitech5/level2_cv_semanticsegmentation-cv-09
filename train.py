@@ -137,7 +137,6 @@ if __name__=="__main__":
     for epoch in range(args.epochs):
         model.train()
         train_loss = 0
-<<<<<<< HEAD
         for step, (images, masks) in tqdm(enumerate(train_loader),total=len(train_loader)):
             # gpu 연산을 위해 device 할당
             images, masks = images.cuda(), masks.cuda()
@@ -165,13 +164,11 @@ if __name__=="__main__":
                     f'Step [{step+1}/{len(train_loader)}], '
                     f'Loss: {round(loss.item(),4)}'
                 )
-                
+                        
         # validation 주기에 따른 loss 출력 및 best model 저장
         if (epoch + 1) % args.val_interval == 0:
             print(f'Start validation #{(epoch+1):2d}')
             model.eval()
-=======
->>>>>>> 3f1c65a7325b9b5ec76a3234c4cfc7f655015832
 
         with tqdm(total=len(train_loader)) as pbar:
             for images, masks in train_loader:

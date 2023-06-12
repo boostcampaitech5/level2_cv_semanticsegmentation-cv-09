@@ -4,4 +4,7 @@ output/
 wandb
 quantized_models/
 converted_model/
+nohup.out
 *.out
+*.pth
+*.pt 

@@ -2,7 +2,7 @@ import sys
 sys.path.append('/opt/ml/level2_cv_semanticsegmentation-cv-09')
 
 import torch.nn as nn
-import utils
+from .init_weights import init_weights
 import torch
 
 class UnetBlock(nn.Module):
@@ -68,9 +68,9 @@ class NestedUNetModel(nn.Module):
         # initialise weights
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
-                utils.init_weights(m, init_type='kaiming')
+                init_weights(m, init_type='kaiming')
             elif isinstance(m, nn.BatchNorm2d):
-                utils.init_weights(m, init_type='kaiming')
+                init_weights(m, init_type='kaiming')
 
     def forward(self, x):                    # (Batch, 3, 256, 256)
 

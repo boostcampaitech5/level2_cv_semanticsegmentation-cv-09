@@ -2,8 +2,8 @@ import torch.nn as nn
 from torchvision import models
 import torch.nn.functional as F
 import segmentation_models_pytorch as smp
-from .nested_unet import get_nestedu_model
 from .hrnet_ocr import get_ocr_model
+from .unet_family import unet_3plus, nested_unet
 
 
 class FcnResnet50(nn.Module):
@@ -42,12 +42,23 @@ class HRNet32OCR(nn.Module):
 class NestedUNet(nn.Module):
     def __init__(self, num_classes=29):
         super(NestedUNet,self).__init__()
-        self.model = get_nestedu_model()
+        self.model = nested_unet.get_nestedu_model(num_classes=num_classes)
     
     def forward(self,x):
         x = self.model(x)
         return x
-    
+        
+"""
+    UNet3+
+"""
+class UNet3plus(nn.Module):
+    def __init__(self, num_classes=29):
+        super(UNet3plus, self).__init__()
+        self.model = unet_3plus.get_unet3plus_model(num_classes = num_classes)
+        
+    def forward(self,x):
+        x = self.model(x)
+        return x
     
 """
     UNet

@@ -66,13 +66,3 @@ def viz_img(path, model, thr, img_size = (512,512)):
     preds = np.stack(preds, 0)
     image = image.squeeze(dim=0).permute(1, 2, 0)
     return image, label2rgb(preds) 
-
-def init_weights(m, init_type='kaiming'):
-    if init_type == 'kaiming':
-        classname = m.__class__.__name__
-        if hasattr(m, 'weight') and (classname.find('Conv') != -1 or classname.find('Linear') != -1):
-            nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-            if hasattr(m, 'bias') and m.bias is not None:
-                nn.init.constant_(m.bias, 0.0)
-    else:
-        raise NotImplementedError("Initialization type '{}' is not supported.".format(init_type))

@@ -44,7 +44,7 @@ def combine_loss(pred, target, bce_weight = 0.5):
     return loss
 
 _criterion_entrypoints = {
-    'bce': nn.BCEWithLogitsLoss,
+    'bce': nn.BCEWithLogitsLoss(),
     'focal': focal_loss,
     'dice': dice_loss,
     'iou': IOU_loss,

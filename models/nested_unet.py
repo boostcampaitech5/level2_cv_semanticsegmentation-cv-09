@@ -1,3 +1,6 @@
+import sys
+sys.path.append('/opt/ml/level2_cv_semanticsegmentation-cv-09')
+
 import torch.nn as nn
 import utils
 import torch
@@ -23,11 +26,10 @@ class UnetBlock(nn.Module):
 
 
 class NestedUNetModel(nn.Module):
-    def __init__(self, num_classes=29, input_channels=3, deep_supervision=False):
+    def __init__(self, num_classes=29, input_channels=3):
         super().__init__()
 
         num_filter = [32, 64, 128, 256, 512]
-        self.deep_supervision = deep_supervision
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
         self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         
@@ -57,14 +59,11 @@ class NestedUNetModel(nn.Module):
         # N to 4 skip
         self.conv0_4 = UnetBlock(num_filter[0]*4 + num_filter[1], num_filter[0], num_filter[0])
 
-        if self.deep_supervision:
-            self.output1 = nn.Conv2d(num_filter[0], num_classes, kernel_size=1)
-            self.output2 = nn.Conv2d(num_filter[0], num_classes, kernel_size=1)
-            self.output3 = nn.Conv2d(num_filter[0], num_classes, kernel_size=1)
-            self.output4 = nn.Conv2d(num_filter[0], num_classes, kernel_size=1)
-
-        else:
-            self.output = nn.Conv2d(num_filter[0], num_classes, kernel_size=1)
+        # deep supervision
+        self.output1 = nn.Conv2d(num_filter[0], num_classes, kernel_size=1)
+        self.output2 = nn.Conv2d(num_filter[0], num_classes, kernel_size=1)
+        self.output3 = nn.Conv2d(num_filter[0], num_classes, kernel_size=1)
+        self.output4 = nn.Conv2d(num_filter[0], num_classes, kernel_size=1)
 
         # initialise weights
         for m in self.modules():
@@ -94,20 +93,25 @@ class NestedUNetModel(nn.Module):
         x1_3 = self.conv1_3(torch.cat([x1_0, x1_1, x1_2, self.up(x2_2)], dim=1))
         x0_4 = self.conv0_4(torch.cat([x0_0, x0_1, x0_2, x0_3, self.up(x1_3)], dim=1))
 
-        if self.deep_supervision:
-            output1 = self.output1(x0_1)
-            output2 = self.output2(x0_2)
-            output3 = self.output3(x0_3)
-            output4 = self.output4(x0_4)
-            output = (output1 + output2 + output3 + output4) / 4
-        else:
-            output = self.output(x0_4)
+        output1 = self.output1(x0_1)
+        output2 = self.output2(x0_2)
+        output3 = self.output3(x0_3)
+        output4 = self.output4(x0_4)
+        output = (output1 + output2 + output3 + output4) / 4
 
         return output
     
     
-def get_nestedu_model(num_classes=29, input_channel=3, deep_supervision=False):
+def get_nestedu_model(num_classes=29, input_channel=3):
     
-    model = NestedUNetModel(num_classes,input_channel, deep_supervision)
+    model = NestedUNetModel(num_classes,input_channel)
     
     return model
+
+if __name__ == "__main__":
+    input_data = torch.full((1, 3, 1024, 1024), 0.5)
+    model = get_nestedu_model()
+    output = model(input_data)
+    print("max : ", torch.max(output))
+    print("min : ", torch.min(output))
+    print("mean : ", torch.mean(output))

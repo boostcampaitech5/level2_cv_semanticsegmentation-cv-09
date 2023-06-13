@@ -37,8 +37,8 @@ def main():
         ("cpu","cuda")
     )
     
-    # uploaded_model = st.file_uploader("Upload your model.", accept_multiple_files=False, type=['pth','pt'])
-    uploaded_model = "/opt/ml/level2_cv_semanticsegmentation-cv-09/checkpoint/hrnet_ocr_best.pt"
+    uploaded_model = st.file_uploader("Upload your model.", accept_multiple_files=False, type=['pth','pt'])
+    
     if uploaded_model is not None:
         model = torch.load(uploaded_model,map_location='cpu')
         model.to(device)

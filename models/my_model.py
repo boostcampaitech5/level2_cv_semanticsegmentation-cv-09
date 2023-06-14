@@ -65,3 +65,14 @@ class Unet(nn.Module):
         return self.model(x)
 
 
+class PSPNet(nn.Module):
+    def __init__(self, num_classes=29):
+        super(PSPNet, self).__init__()
+        self.model = smp.PSPNet(
+            encoder_name="resnet101",        # choose encoder, e.g. mobilenet_v2 or efficientnet-b7
+            encoder_weights="imagenet",     # use `imagenet` pre-trained weights for encoder initialization
+            in_channels=3,                  # model input channels (1 for gray-scale images, 3 for RGB, etc.)
+            classes=num_classes,                      # model output channels (number of classes in your dataset)
+        )
+    def forward(self, x):
+        return self.model(x)

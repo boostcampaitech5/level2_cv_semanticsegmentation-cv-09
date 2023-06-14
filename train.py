@@ -22,7 +22,7 @@ def get_args():
     parser.add_argument('--epochs', type=int, default=50, help='number of epochs to train (default: 50)')
     
     # data
-    parser.add_argument("--resize", nargs="+", type=int, default=[512, 512], help='resize size for image when training')
+    parser.add_argument("--resize", nargs="+", type=int, default=[512,512], help='resize size for image when training')
     parser.add_argument('--batch_size', type=int, default=8, help='input batch size for training (default: 8)')
     parser.add_argument('--valid_batch_size', type=int, default=2, help='input batch size for validing (default: 2)')
     
@@ -36,11 +36,12 @@ def get_args():
     parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer such as SGD, Momentum, Adam, Adagrad (default: adam)')
     parser.add_argument('--momentum', type=float, default=0.9, help='momentum (default: 0.9)')
     parser.add_argument('--weight_decay', type=float, default=1e-6, help='weight decay (default: 1e-6)')
-    parser.add_argument('--loss', type=str, default='bce', help='[bce, focal, dice, iou, combine: (default: bce)')
+    parser.add_argument('--loss', type=str, default='combine', help='[bce, focal, dice, iou, combine: (default: bce)')
 
     # scheduler
-    parser.add_argument('--scheduler', type=str, default='steplr', help='scheduler such as steplr, lambdalr, exponentiallr, cycliclr, reducelronplateau etc. (default: steplr)')
-    parser.add_argument('--gamma', type=float, default=0.5, help='learning rate scheduler gamma (default: 0.5)')
+    parser.add_argument('--scheduler', type=str, default='StepLR', help='scheduler such as steplr, lambdalr, exponentiallr, cycliclr, reducelronplateau etc. (default: steplr)')
+    parser.add_argument('--gamma', type=float, default=0.1, help='learning rate scheduler gamma (default: 0.5)')
+    parser.add_argument('--step_size', type=float, default=10, help='Period of learning rate decay. (default: 10)')
     parser.add_argument('--tmax', type=int, default=5, help='tmax used in CyclicLR and CosineAnnealingLR (default: 5)')
     parser.add_argument('--maxlr', type=float, default=0.1, help='maxlr used in CyclicLR (default: 0.1)')
     parser.add_argument('--mode', type=str, default='triangular', help='mode used in CyclicLR such as triangular, triangular2, exp_range (default: triangular)')
@@ -127,6 +128,10 @@ if __name__=="__main__":
     # Optimizer 정의
     optim_module = getattr(import_module("torch.optim"), args.optimizer)  # default: adam
     optimizer = optim_module(params=model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+
+    # Scheduler 정의
+    sched_module = getattr(import_module("torch.optim.lr_scheduler"), args.scheduler) # default: steplr
+    scheduler = sched_module(optimizer, step_size=args.step_size, gamma=args.gamma)
     
     print(f'Start training..')
     
@@ -171,6 +176,8 @@ if __name__=="__main__":
                     'train loss': loss.item()
                 }
                 pbar.set_postfix(train_dict)
+
+            scheduler.step()
 
         # validation 주기에 따른 loss 출력 및 best model 저장
         if (epoch + 1) % args.val_interval == 0:

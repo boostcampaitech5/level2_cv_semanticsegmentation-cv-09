@@ -39,8 +39,9 @@ def get_args():
     parser.add_argument('--loss', type=str, default='bce', help='[bce, focal, dice, iou, combine: (default: bce)')
 
     # scheduler
-    parser.add_argument('--scheduler', type=str, default='steplr', help='scheduler such as steplr, lambdalr, exponentiallr, cycliclr, reducelronplateau etc. (default: steplr)')
-    parser.add_argument('--gamma', type=float, default=0.5, help='learning rate scheduler gamma (default: 0.5)')
+    parser.add_argument('--scheduler', type=str, default='StepLR', help='scheduler such as steplr, lambdalr, exponentiallr, cycliclr, reducelronplateau etc. (default: steplr)')
+    parser.add_argument('--gamma', type=float, default=0.1, help='learning rate scheduler gamma (default: 0.5)')
+    parser.add_argument('--step_size', type=float, default=10, help='Period of learning rate decay. (default: 10)')
     parser.add_argument('--tmax', type=int, default=5, help='tmax used in CyclicLR and CosineAnnealingLR (default: 5)')
     parser.add_argument('--maxlr', type=float, default=0.1, help='maxlr used in CyclicLR (default: 0.1)')
     parser.add_argument('--mode', type=str, default='triangular', help='mode used in CyclicLR such as triangular, triangular2, exp_range (default: triangular)')
@@ -127,6 +128,10 @@ if __name__=="__main__":
     # Optimizer 정의
     optim_module = getattr(import_module("torch.optim"), args.optimizer)  # default: adam
     optimizer = optim_module(params=model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+
+    # Scheduler 정의
+    sched_module = getattr(import_module("torch.optim.lr_scheduler"), args.scheduler) # default: steplr
+    scheduler = sched_module(optimizer, step_size=args.step_size, gamma=args.gamma)
     
     print(f'Start training..')
     
@@ -171,6 +176,8 @@ if __name__=="__main__":
                     'train loss': loss.item()
                 }
                 pbar.set_postfix(train_dict)
+
+            scheduler.step()
 
         # validation 주기에 따른 loss 출력 및 best model 저장
         if (epoch + 1) % args.val_interval == 0:

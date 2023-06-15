@@ -1,5 +1,5 @@
 from dataset.dataset import split_dataset, XRayDataset
-from dataset.transforms import get_train_transform
+from dataset.transforms import get_train_transform, mixup_collate_fn
 from optim.losses import create_criterion
 from utils import *
 import argparse
@@ -25,6 +25,7 @@ def get_args():
     parser.add_argument("--resize", nargs="+", type=int, default=[512, 512], help='resize size for image when training')
     parser.add_argument('--batch_size', type=int, default=8, help='input batch size for training (default: 8)')
     parser.add_argument('--valid_batch_size', type=int, default=2, help='input batch size for validing (default: 2)')
+    parser.add_argument('--mixup', action='store_true', help="use mixup")
     
     # model
     parser.add_argument('--model', type=str, default='FcnResnet50', help='model name (default: FcnResnet50)')
@@ -82,6 +83,11 @@ if __name__=="__main__":
         
     seed_everything(args.seed)
     
+    if args.mixup:
+        collate_fn = mixup_collate_fn
+    else:
+        collate_fn = None
+        
     train_filenames, train_labelnames, val_filenames, val_labelnames = split_dataset()
     
     train_transform = get_train_transform(img_size=args.resize)
@@ -106,6 +112,7 @@ if __name__=="__main__":
         shuffle=True,
         num_workers=num_workers,
         drop_last=True,
+        collate_fn=collate_fn,
     )
 
     valid_loader = DataLoader(
@@ -146,7 +153,7 @@ if __name__=="__main__":
                 # gpu 연산을 위해 device 할당
                 images, masks = images.cuda(), masks.cuda()
                 model = model.cuda()
-                
+                    
                 # inference
                 with amp.autocast():
                     outputs = model(images)

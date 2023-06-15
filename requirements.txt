@@ -8,3 +8,5 @@ albumentations
 wandb
 yacs
 torchinfo
+bentoml
+streamlit

@@ -22,7 +22,7 @@ def get_args():
     parser.add_argument('--epochs', type=int, default=50, help='number of epochs to train (default: 50)')
     
     # data
-    parser.add_argument("--resize", nargs="+", type=int, default=[512,512], help='resize size for image when training')
+    parser.add_argument("--resize", nargs="+", type=int, default=[512, 512], help='resize size for image when training')
     parser.add_argument('--batch_size', type=int, default=8, help='input batch size for training (default: 8)')
     parser.add_argument('--valid_batch_size', type=int, default=2, help='input batch size for validing (default: 2)')
     
@@ -36,7 +36,7 @@ def get_args():
     parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer such as SGD, Momentum, Adam, Adagrad (default: adam)')
     parser.add_argument('--momentum', type=float, default=0.9, help='momentum (default: 0.9)')
     parser.add_argument('--weight_decay', type=float, default=1e-6, help='weight decay (default: 1e-6)')
-    parser.add_argument('--loss', type=str, default='combine', help='[bce, focal, dice, iou, combine: (default: bce)')
+    parser.add_argument('--loss', type=str, default='bce', help='[bce, focal, dice, iou, combine: (default: bce)')
 
     # scheduler
     parser.add_argument('--scheduler', type=str, default='StepLR', help='scheduler such as steplr, lambdalr, exponentiallr, cycliclr, reducelronplateau etc. (default: steplr)')

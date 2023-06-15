@@ -7,6 +7,7 @@ from PIL import Image
 import cv2
 from pytorch_grad_cam.utils.image import show_cam_on_image
 import json
+from ensem import ensemble 
 
 st.set_page_config(initial_sidebar_state="expanded")
 st.title("Bone Segmentation ")
@@ -15,7 +16,7 @@ st.subheader("CV-09 Team model")
 with st.sidebar:
     mode = st.sidebar.radio(
         "Select Mode",
-        ("Output","GradCAM","CompareLoss")
+        ("Output","GradCAM","CompareLoss","Ensemble")
     )
 
 def main():
@@ -119,4 +120,7 @@ def main():
                 
     
 if __name__=="__main__":
-    main()
+    if mode == 'Ensemble':
+        ensemble()
+    else:
+        main()

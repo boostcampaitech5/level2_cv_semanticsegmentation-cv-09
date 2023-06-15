@@ -1,5 +1,5 @@
 from dataset.dataset import split_dataset, XRayDataset
-from dataset.transforms import get_train_transform, mixup_collate_fn
+from dataset.transforms import get_train_transform, mixup_collate_fn, cutmix_collate_fn
 from optim.losses import create_criterion
 from utils import *
 import argparse
@@ -26,6 +26,7 @@ def get_args():
     parser.add_argument('--batch_size', type=int, default=8, help='input batch size for training (default: 8)')
     parser.add_argument('--valid_batch_size', type=int, default=2, help='input batch size for validing (default: 2)')
     parser.add_argument('--mixup', action='store_true', help="use mixup")
+    parser.add_argument('--cutmix', action='store_true', help="use cutmix")
     
     # model
     parser.add_argument('--model', type=str, default='FcnResnet50', help='model name (default: FcnResnet50)')
@@ -85,6 +86,8 @@ if __name__=="__main__":
     
     if args.mixup:
         collate_fn = mixup_collate_fn
+    elif args.cutmix:
+        collate_fn = cutmix_collate_fn
     else:
         collate_fn = None
         

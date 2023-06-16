@@ -13,7 +13,6 @@ from importlib import import_module
 import wandb
 import torch.cuda.amp as amp
 import matplotlib.pyplot as plt
-import torch.cuda.amp as amp
 
 def get_args():
     parser = argparse.ArgumentParser()

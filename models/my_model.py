@@ -76,3 +76,15 @@ class PSPNet(nn.Module):
         )
     def forward(self, x):
         return self.model(x)
+
+class DeepLabV3Plus(nn.Module):
+    def __init__(self, num_classes=29):
+        super(DeepLabV3Plus, self).__init__()
+        self.model = smp.DeepLabV3Plus(
+            encoder_name="resnet101",
+            encoder_weights="imagenet",
+            in_channels=3,
+            classes=num_classes,
+        )
+    def forward(self, x):
+        return self.model(x)

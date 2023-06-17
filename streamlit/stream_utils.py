@@ -113,7 +113,11 @@ def do_gradcam(model,img):
     with torch.autograd.set_grad_enabled(True):
         output = model(img)
         model.zero_grad()
-        output.backward(torch.ones_like(output))
+        normal_output = torch.nn.functional.sigmoid(output)
+        mask = (normal_output > 0.5).float()
+        loss = (output * mask).sum()
+        loss.backward(retain_graph = True)
+        # output.backward(torch.ones_like(output))
     
     for handle in handles:
         handle.remove()

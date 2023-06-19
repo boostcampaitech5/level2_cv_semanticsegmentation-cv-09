@@ -16,7 +16,7 @@ st.subheader("CV-09 Team model")
 with st.sidebar:
     mode = st.sidebar.radio(
         "Select Mode",
-        ("Output","GradCAM","CompareLoss","Ensemble")
+        ("Output","GradCAM","CompareLoss")
     )
 
 def main():
@@ -120,7 +120,4 @@ def main():
                 
     
 if __name__=="__main__":
-    if mode == 'Ensemble':
-        ensemble()
-    else:
-        main()
+    main()

@@ -138,6 +138,7 @@ if __name__=="__main__":
     optim_module = getattr(import_module("torch.optim"), args.optimizer)  # default: adam
     optimizer = optim_module(params=model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,T_0=30,T_mult=1, eta_min=args.lr*0.01)
     print(f'Start training..')
     
     n_class = len(XRayDataset.CLASSES)
@@ -182,6 +183,8 @@ if __name__=="__main__":
                 }
                 pbar.set_postfix(train_dict)
 
+            scheduler.step()
+            
         # validation 주기에 따른 loss 출력 및 best model 저장
         if (epoch + 1) % args.val_interval == 0:
             print(f'Start validation #{(epoch+1):2d}')

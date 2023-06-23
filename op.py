@@ -1,5 +1,10 @@
+import os
+
+import optuna
+from optuna.trial import TrialState
+
 from dataset.dataset import split_dataset, XRayDataset
-from dataset.transforms import get_train_transform, mixup_collate_fn, cutmix_collate_fn
+from dataset.transforms import get_train_transform
 from optim.losses import create_criterion
 from utils import *
 import argparse
@@ -17,81 +22,34 @@ import torch.cuda.amp as amp
 
 def get_args():
     parser = argparse.ArgumentParser()
-    # Data and model checkpoints directories
+
     parser.add_argument('--seed', type=int, default=42, help='random seed (default: 42)')
     parser.add_argument('--epochs', type=int, default=50, help='number of epochs to train (default: 50)')
     
+
     # data
-    parser.add_argument("--resize", nargs="+", type=int, default=[512, 512], help='resize size for image when training')
+    parser.add_argument("--resize", nargs="+", type=int, default=[512,512], help='resize size for image when training')
     parser.add_argument('--batch_size', type=int, default=8, help='input batch size for training (default: 8)')
     parser.add_argument('--valid_batch_size', type=int, default=2, help='input batch size for validing (default: 2)')
-    parser.add_argument('--mixup', action='store_true', help="use mixup")
-    parser.add_argument('--cutmix', action='store_true', help="use cutmix")
-    
-    # model
+
     parser.add_argument('--model', type=str, default='FcnResnet50', help='model name (default: FcnResnet50)')
-    parser.add_argument('--early_stopping', type=int, default = 5, help='input early stopping patience, It does not work if you input -1, default : 5')
-
-    # optimizer
-    parser.add_argument('--lr', type=float, default=1e-4, help='learning rate (default: 1e-4)')
-    parser.add_argument('--lr_decay_step', type=int, default=5, help='learning rate scheduler deacy step (default: 5)')
-    parser.add_argument('--optimizer', type=str, default='Adam', help='optimizer such as SGD, Momentum, Adam, Adagrad (default: adam)')
-    parser.add_argument('--momentum', type=float, default=0.9, help='momentum (default: 0.9)')
-    parser.add_argument('--weight_decay', type=float, default=1e-6, help='weight decay (default: 1e-6)')
-    parser.add_argument('--loss', type=str, default='bce', help='[bce, focal, dice, iou, combine: (default: bce)')
-
-    # scheduler
-    parser.add_argument('--scheduler', type=str, default='StepLR', help='scheduler such as steplr, lambdalr, exponentiallr, cycliclr, reducelronplateau etc. (default: steplr)')
-    parser.add_argument('--gamma', type=float, default=0.1, help='learning rate scheduler gamma (default: 0.5)')
-    parser.add_argument('--step_size', type=float, default=10, help='Period of learning rate decay. (default: 10)')
-    parser.add_argument('--tmax', type=int, default=5, help='tmax used in CyclicLR and CosineAnnealingLR (default: 5)')
-    parser.add_argument('--maxlr', type=float, default=0.1, help='maxlr used in CyclicLR (default: 0.1)')
-    parser.add_argument('--mode', type=str, default='triangular', help='mode used in CyclicLR such as triangular, triangular2, exp_range (default: triangular)')
-    parser.add_argument('--factor', type=float, default=0.5, help='mode used in ReduceLROnPlateau (default: 0.5)')
-    parser.add_argument('--patience', type=int, default=4, help='mode used in ReduceLROnPlateau (default: 4)')
-    parser.add_argument('--threshold', type=float, default=1e-4, help='mode used in ReduceLROnPlateau (default: 1e-4)')
-
-    # # loss
-    # parser.add_argument('--criterion', type=str, default='cross_entropy', help='criterion type (default: cross_entropy)')
-    parser.add_argument('--dice_thr', type=float, default=0.5, help='dice loss threshold (default: 0.5)')
-    
-    # log
-    parser.add_argument('--wandb', action='store_true', help='wandb logging')
-    parser.add_argument('--project',type=str, default='seg_baseline')
-    parser.add_argument('--name',type=str, default='base')
-    parser.add_argument('--val_interval', type=int, default=1, help='evaluate interval (default: 1)')
-    parser.add_argument('--viz_img_path', type=str, default='train/DCM/ID001/image1661130828152_R.png')
-
-    # Container environment
-    parser.add_argument('--data_dir', type=str, default='/opt/ml')
-    parser.add_argument('--save_dir', type=str, default='./checkpoint')
-    parser.add_argument('--save_name', type=str, default='best.pt')
+    parser.add_argument('--loss', type=str, default='combine', help='[bce, focal, dice, iou, combine: (default: bce)')
 
     args = parser.parse_args()
     
     return args
 
-if __name__=="__main__":
-    
+# 시드 실험
+# def get_seed(trial):
+#     the_seed = trial.suggest_int("seed",1,1000)
+
+#     return the_seed
+
+def get_dataset():
     args = get_args()
-    
-    if args.wandb:
-        wandb.init(
-            entity = 'boost_cv_09',
-            project = args.project,
-            name = args.name,
-            config = args
-        )
-        
+
     seed_everything(args.seed)
     
-    if args.mixup:
-        collate_fn = mixup_collate_fn
-    elif args.cutmix:
-        collate_fn = cutmix_collate_fn
-    else:
-        collate_fn = None
-        
     train_filenames, train_labelnames, val_filenames, val_labelnames = split_dataset()
     
     train_transform = get_train_transform(img_size=args.resize)
@@ -110,13 +68,13 @@ if __name__=="__main__":
                             )
 
     num_workers = min(args.batch_size, 8)
+
     train_loader = DataLoader(
         dataset=train_dataset, 
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=num_workers,
         drop_last=True,
-        collate_fn=collate_fn,
     )
 
     valid_loader = DataLoader(
@@ -125,30 +83,58 @@ if __name__=="__main__":
         shuffle=False,
         drop_last=False
     )
-    
+    return train_loader, valid_loader
+
+def define_model():
+    args = get_args()
+
+    # model_type = trial.suggest_categorical("model_type", ["FcnResnet50","HRNet48OCR","NestedUNet","Unet","PSPNet","DeepLabV3Plus"])
+    # model_type = "PSPNet"
+
     model_module = getattr(import_module("models.my_model"), args.model)  # default: BaseModel
     model = model_module(
-        num_classes=len(train_dataset.CLASSES)
+        num_classes=29
     )
+    
+    return model
 
-    
+
+def objective(trial):
+    args = get_args()
+
+    seed_everything(args.seed)
+
+    # Generate the model.
+    model = define_model().cuda()
+
     # Loss function 정의
-    criterion = create_criterion(args.loss)
-    
-    # Optimizer 정의
-    optim_module = getattr(import_module("torch.optim"), args.optimizer)  # default: adam
-    optimizer = optim_module(params=model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    # loss_type = trial.suggest_categorical("loss_type",["bce","focal","dice","iou","combine"])
+    loss_type = args.loss
+    criterion = create_criterion(loss_type)
+
+    # optimizer 설정 default = Adam
+    # optimizer_name = trial.suggest_categorical("optimizer", ["Adam", "RMSprop", "SGD", "AdamW"])
+    optimizer_name = "Adam"
+    lr = trial.suggest_float("lr", 1e-5, 1e-1, log=True)
+    optimizer = getattr(import_module("torch.optim"), optimizer_name)(model.parameters(), lr=lr)
+
+    # threshold 실험하기 default = 0.5
+    # thres = trial.suggest_categorical("threshold", [0.3, 0.4, 0.5, 0.6, 0.7])
+    thres = 0.5
 
     # Scheduler 정의
-    sched_module = getattr(import_module("torch.optim.lr_scheduler"), args.scheduler) # default: steplr
-    scheduler = sched_module(optimizer, step_size=args.step_size, gamma=args.gamma)
+    sched_module = getattr(import_module("torch.optim.lr_scheduler"), "StepLR") # default: steplr
+    scheduler = sched_module(optimizer, step_size=10, gamma=0.1)
     
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,T_0=30,T_mult=1, eta_min=args.lr*0.01)
+
+     # Get the FashionMNIST dataset.
+    train_loader, valid_loader = get_dataset()
+
     print(f'Start training..')
     
     n_class = len(XRayDataset.CLASSES)
     best_dice = 0.
-    
+
     # AMP : loss scale을 위한 GradScaler 생성
     scaler = amp.GradScaler()
     
@@ -162,7 +148,7 @@ if __name__=="__main__":
                 # gpu 연산을 위해 device 할당
                 images, masks = images.cuda(), masks.cuda()
                 model = model.cuda()
-                    
+                
                 # inference
                 with amp.autocast():
                     outputs = model(images)
@@ -191,7 +177,7 @@ if __name__=="__main__":
             scheduler.step()
 
         # validation 주기에 따른 loss 출력 및 best model 저장
-        if (epoch + 1) % args.val_interval == 0:
+        if (epoch + 1) % 1 == 0:
             print(f'Start validation #{(epoch+1):2d}')
             model.eval()
 
@@ -219,7 +205,7 @@ if __name__=="__main__":
                         val_loss += loss.item()
                         cnt += 1
                         outputs = torch.sigmoid(outputs)
-                        outputs = (outputs > args.dice_thr).detach().cpu()
+                        outputs = (outputs > thres).detach().cpu()
                         masks = masks.detach().cpu()
                         
                         dice = dice_coef(outputs, masks)
@@ -242,35 +228,58 @@ if __name__=="__main__":
                     print(dice_str)
                 
                     avg_dice = torch.mean(dices_per_class).item()
-                
-            if best_dice < avg_dice:
-                print(f"Best performance at epoch: {epoch + 1}, {best_dice:.4f} -> {avg_dice:.4f}")
-                best_dice = avg_dice
-                save_model(model,args.save_dir, args.save_name)
-                
-        if args.wandb:
-            if (epoch+1) < args.val_interval:
-                val_loss = 0
-                avg_dice = 0
 
-            metric_info = {
-                'lr/lr' : optimizer.param_groups[0]['lr'],
-                'train/loss' : train_loss/len(train_loader),
-                'val/loss' : val_loss/len(valid_loader),
-                'val/dice' : avg_dice,
-            }
+                    print(avg_dice)
             
-            class_data = [value.item() for value in dices_per_class]
-            plt.bar([i for i in range(len(XRayDataset.CLASSES))], class_data)
-            
-            metric_info['dice_hist'] = wandb.Image(plt)
-            # logging visualize output - by kyungbong 
-            viz_image, viz_preds = viz_img(os.path.join(args.data_dir, args.viz_img_path), model, args.dice_thr, args.resize)
-            fig, ax = plt.subplots(1, 2, figsize=(24, 12))
-            ax[0].imshow(viz_image)    # remove channel dimension
-            ax[1].imshow(viz_preds)
-            metric_info['viz_img'] = wandb.Image(plt)
+                    trial.report(avg_dice, epoch)
 
-            wandb.log(metric_info, step=epoch)
-            plt.clf()
-            plt.close('all')
+                    # Handle pruning based on the intermediate value.
+                    if trial.should_prune():
+                        raise optuna.exceptions.TrialPruned() 
+
+    return avg_dice
+
+# Sampler : hyper-parameter를 찾는 방법
+
+# Option 1 (bayesian optimization 방법)
+# 목적함수의 대략적은 형태에 대한 확률추정 모델로써 Gaussian Process 확률 모델을 사용
+# from optuna.integration import SkoptSampler
+# sampler = SkoptSampler(
+#     skopt_kwargs={'n_random_starts':5,
+#                   'acq_func':'EI',
+#                   'acq_func_kwargs': {'xi':0.02}})
+
+# Option 2 (TPE 방법)
+# Sampler using TPE (Tree-structured Parzen Estimator) algorithm.
+
+from optuna.samplers import TPESampler
+sampler = TPESampler()
+
+
+study = optuna.create_study(direction="maximize", sampler=sampler)
+
+# n_trials 지정없으면 무한 반복
+study.optimize(objective, n_trials=10)
+pruned_trials = study.get_trials(deepcopy=False, states=[TrialState.PRUNED])
+complete_trials = study.get_trials(deepcopy=False, states=[TrialState.COMPLETE])
+
+
+print(f"Study statistics: ")
+print(f"Number of finished trials: {len(study.trials)}")
+print(f"Number of pruned trials: {len(pruned_trials)}")
+print(f"Number of complete trials: {len(complete_trials)}")
+
+
+# SAVE
+import joblib
+joblib.dump(study, "optuna_tuning_model.pkl")
+
+print("Best trial until now:")
+print(" Value: ", study.best_trial.value)
+print(" Params: ")
+for key, value in study.best_trial.params.items():
+    print(f"    {key}: {value}")
+
+
+# 파라미터 중요도 확인 그래프
+optuna.visualization.plot_param_importances(study)

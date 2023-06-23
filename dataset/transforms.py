@@ -26,7 +26,7 @@ def get_test_transform(img_size=(512,512)):
 
 def mixup_collate_fn(batch):
     indice = torch.randperm(len(batch))
-    alpha = np.round(np.random.beta(0.2,0.2),2)
+    alpha = np.random.beta(1,1)
     img = []
     label = []
     for a, b in batch:

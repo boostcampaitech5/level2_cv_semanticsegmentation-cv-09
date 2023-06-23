@@ -143,6 +143,7 @@ if __name__=="__main__":
     sched_module = getattr(import_module("torch.optim.lr_scheduler"), args.scheduler) # default: steplr
     scheduler = sched_module(optimizer, step_size=args.step_size, gamma=args.gamma)
     
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer,T_0=30,T_mult=1, eta_min=args.lr*0.01)
     print(f'Start training..')
     
     n_class = len(XRayDataset.CLASSES)

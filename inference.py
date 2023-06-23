@@ -53,7 +53,13 @@ def test(model, data_loader, thr=0.5):
             # restore original size
             outputs = F.interpolate(outputs, size=(2048, 2048), mode="bilinear")
             outputs = torch.sigmoid(outputs)
-            outputs = (outputs > thr).detach().cpu().numpy()
+            # outputs = (outputs > 0.1).detach().cpu().numpy()
+            for i in range(29):
+                if i==26 or i == 20:
+                    outputs[:,i] = (outputs[:,i]> 0.9)
+                else:
+                    outputs[:,i] = (outputs[:,i]> 0.5)
+            outputs = outputs.detach().cpu().numpy()
             
             for output, image_name in zip(outputs, image_names):
                 for c, segm in enumerate(output):
@@ -94,7 +100,7 @@ if __name__=="__main__":
     
     test_loader = DataLoader(
         dataset=test_dataset, 
-        batch_size=2,
+        batch_size=8,
         shuffle=False,
         num_workers=2,
         drop_last=False

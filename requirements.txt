@@ -6,3 +6,8 @@ tqdm
 scikit-learn
 albumentations
 wandb
+yacs
+torchinfo
+streamlit
+segmentation-models-pytorch
+grad-cam

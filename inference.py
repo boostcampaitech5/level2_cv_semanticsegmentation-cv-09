@@ -8,6 +8,7 @@ import os
 import pandas as pd
 import argparse
 from importlib import import_module
+import torch.nn.functional as F
 
 def encode_mask_to_rle(mask):
     '''
@@ -47,12 +48,18 @@ def test(model, data_loader, thr=0.5):
 
         for step, (images, image_names) in tqdm(enumerate(data_loader), total=len(data_loader)):
             images = images.cuda()    
-            outputs = model(images)['out']
+            outputs = model(images)
             
             # restore original size
             outputs = F.interpolate(outputs, size=(2048, 2048), mode="bilinear")
             outputs = torch.sigmoid(outputs)
-            outputs = (outputs > thr).detach().cpu().numpy()
+            # outputs = (outputs > 0.1).detach().cpu().numpy()
+            for i in range(29):
+                if i==26 or i == 20:
+                    outputs[:,i] = (outputs[:,i]> 0.9)
+                else:
+                    outputs[:,i] = (outputs[:,i]> 0.5)
+            outputs = outputs.detach().cpu().numpy()
             
             for output, image_name in zip(outputs, image_names):
                 for c, segm in enumerate(output):
@@ -71,8 +78,10 @@ def get_argparser():
 
     # Container environment
     parser.add_argument('--data_dir', type=str, default=os.environ.get('SM_CHANNEL_EVAL', '/opt/ml/test/DCM'))
-    parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_CHANNEL_MODEL', './save_model'))
+    parser.add_argument('--model_dir', type=str, default=os.environ.get('SM_CHANNEL_MODEL', './checkpoint'))
     parser.add_argument('--output_dir', type=str, default=os.environ.get('SM_OUTPUT_DATA_DIR', './output'))
+    parser.add_argument('--weight', type=str, default='best.pt')
+    parser.add_argument("--resize", nargs="+", type=int, default=[512, 512], help='resize size for image when training')
 
     args = parser.parse_args()
     return args
@@ -81,8 +90,8 @@ def get_argparser():
 if __name__=="__main__":
     args = get_argparser()
     
-    
-    transform = get_test_transform()
+    print(args.resize)
+    transform = get_test_transform(args.resize)
     
     test_dataset = XRayInferenceDataset(
         data_dir=args.data_dir,
@@ -91,18 +100,14 @@ if __name__=="__main__":
     
     test_loader = DataLoader(
         dataset=test_dataset, 
-        batch_size=2,
+        batch_size=8,
         shuffle=False,
         num_workers=2,
         drop_last=False
     )
     
-    model_module = getattr(import_module("models.my_model"), args.model)  # default: BaseModel
-    model = model_module(
-        num_classes=len(test_dataset.CLASSES)
-    )
-    
-    model = torch.load(os.path.join(args.model_dir, "fcn_resnet50_best.pt"))
+    model = torch.load(os.path.join(args.model_dir, args.weight))
+
     
     rles, filename_and_class = test(model, test_loader)
     
